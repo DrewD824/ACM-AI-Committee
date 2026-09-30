@@ -1,0 +1,32 @@
+from datasets import load_dataset
+
+print("Downloading public dataset from Hugging Face...")
+
+# 1. Load the public, un-gated dataset
+# We grab just 20,000 rows to keep the demo fine-tuning fast
+ds = load_dataset("geekyrakshit/prompt-injection-dataset", split="train[:20000]")
+
+# 2. Format the data for Unsloth
+def format_data(row):
+    # Determine the text column (some datasets use 'text', others use 'prompt')
+    prompt_text = row.get("prompt", row.get("text", ""))
+    
+    # Map the integer label to your vLLM script's expected string
+    # 1 = Malicious, 0 = Clean
+    label = "MALICIOUS" if row["label"] == 1 else "CLEAN"
+    
+    return {"instruction": prompt_text, "output": label}
+
+print("Formatting labels...")
+# Apply the formatting and strip out the original columns
+clean_ds = ds.map(format_data, remove_columns=ds.column_names)
+
+# 3. Shuffle the data
+print("Shuffling the dataset...")
+clean_ds = clean_ds.shuffle(seed=42)
+
+# 4. Export to JSONL
+output_filename = "committee_filter_dataset.jsonl"
+clean_ds.to_json(output_filename)
+
+print(f"Success! Saved {len(clean_ds)} perfectly formatted examples to {output_filename}.")
