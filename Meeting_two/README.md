@@ -7,7 +7,7 @@ one model to check each prompt before another model answers it.
 Student's browser (Open WebUI)
              |
              v
-     Flask gateway (:8000)
+     Flask gateway (:8003)
              |
              v
      Filter model (:8001)
@@ -15,7 +15,7 @@ Student's browser (Open WebUI)
      UNSAFE         SAFE
        |             |
        v             v
-  Fixed refusal   General model (:8002)
+  Fixed refusal   General model (:8000)
                      |
                      v
                   Answer
@@ -34,17 +34,17 @@ connects these pieces; it does not load or train a model itself.
 ## Before the meeting
 
 You need Python 3.10+, Open WebUI, and two running vLLM servers. Model choice
-depends on the hardware available to your group. Use `filter-model` and
-`general-model` as their `--served-model-name` values, with ports 8001 and 8002.
+depends on the hardware available to your group. Use `committee-specialist` and
+`committee-general` as their `--served-model-name` values, with ports 8001 and 8000.
 
 The gateway defaults to both model servers running on the same machine:
 
 | Setting | Default |
 | --- | --- |
-| `FILTER_BASE_URL` | `http://localhost:8001/v1` |
-| `FILTER_MODEL` | `filter-model` |
-| `GENERAL_BASE_URL` | `http://localhost:8002/v1` |
-| `GENERAL_MODEL` | `general-model` |
+| `FILTER_BASE_URL` | `http://127.0.0.1:8001/v1` |
+| `FILTER_MODEL` | `committee-specialist` |
+| `GENERAL_BASE_URL` | `http://127.0.0.1:8000/v1` |
+| `GENERAL_MODEL` | `committee-general` |
 
 If your servers use different addresses or model names, set the matching
 environment variables or edit the defaults at the top of `gateway.py`.
@@ -58,7 +58,7 @@ python gateway.py
 
 In Open WebUI's OpenAI connection settings, add:
 
-- **API URL:** `http://<gateway-host>:8000/v1`
+- **API URL:** `http://<gateway-host>:8003/v1`
 - **API key:** `EMPTY` (a placeholder; this demo gateway does not check keys)
 
 Replace `<gateway-host>` with an address that the **Open WebUI server** can
@@ -66,7 +66,7 @@ reach. If it runs directly on the same machine, use `localhost`. If Open WebUI
 runs inside a container, its `localhost` refers to that container; use the
 gateway machine's reachable address instead.
 
-Select **committee-model** in the browser and start chatting. If Open WebUI
+Select **filtered-model** in the browser and start chatting. If Open WebUI
 has a streaming option, turn it off for this demo; the gateway returns complete
 answers rather than a stream of tokens.
 
@@ -85,7 +85,7 @@ Then read `judge_user_message()` to see the filter's instructions. It asks for
 case and surrounding whitespace. Other replies are rejected.
 
 Finally, `format_response()` wraps the answer in the JSON structure the browser
-expects. `/v1/models` lets Open WebUI discover `committee-model`, and `/health`
+expects. `/v1/models` lets Open WebUI discover `filtered-model`, and `/health`
 checks that the gateway is running.
 
 ## During the demo

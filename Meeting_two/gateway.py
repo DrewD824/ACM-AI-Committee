@@ -14,8 +14,10 @@ Run: python gateway.py
 Open WebUI API URL: http://<gateway-host>:8003/v1
 """
 
+import json
 import os
 import random
+from urllib.request import urlopen
 
 from flask import Flask, jsonify, request
 from openai import OpenAI
@@ -28,11 +30,11 @@ from openai import OpenAI
 # os.environ.get reads an environment variable, or uses the default below.
 # For a local demo, the defaults work without setting environment variables.
 
-FILTER_BASE_URL = os.environ.get("FILTER_BASE_URL", "http://127.0.0.1:8000/v1")
-FILTER_MODEL = os.environ.get("FILTER_MODEL", "filter-model")
+FILTER_BASE_URL = os.environ.get("FILTER_BASE_URL", "http://127.0.0.1:8001/v1")
+FILTER_MODEL = os.environ.get("FILTER_MODEL", "committee-specialist")
 
-GENERAL_BASE_URL = os.environ.get("GENERAL_BASE_URL", "http://127.0.0.1:8001/v1")
-GENERAL_MODEL = os.environ.get("GENERAL_MODEL", "general-model")
+GENERAL_BASE_URL = os.environ.get("GENERAL_BASE_URL", "http://127.0.0.1:8000/v1")
+GENERAL_MODEL = os.environ.get("GENERAL_MODEL", "committee-general")
 
 # Students see this single name in Open WebUI, even though we use two models.
 SERVED_MODEL = "filtered-model"
@@ -68,6 +70,31 @@ general_client = OpenAI(base_url=GENERAL_BASE_URL, api_key="EMPTY")
 
 # Flask receives the HTTP requests sent by Open WebUI.
 app = Flask(__name__)
+
+
+def validate_model_servers():
+    """Warn about unreachable servers or mismatched model IDs at startup."""
+    for role, base_url, model in (
+        ("specialist", FILTER_BASE_URL, FILTER_MODEL),
+        ("general", GENERAL_BASE_URL, GENERAL_MODEL),
+    ):
+        models_url = base_url.rstrip("/") + "/models"
+        try:
+            with urlopen(models_url, timeout=3) as response:
+                advertised = [item["id"] for item in json.load(response)["data"]]
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            app.logger.warning(
+                "Cannot validate %s model %r at %s: %s",
+                role, model, models_url, error,
+            )
+            continue
+        if model not in advertised:
+            app.logger.warning(
+                "%s server at %s does not advertise expected model %r; "
+                "advertised models: %s. Check the model environment variable "
+                "and vLLM --served-model-name.",
+                role, models_url, model, advertised,
+            )
 
 
 def judge_user_message(user_text: str) -> bool:
@@ -169,4 +196,5 @@ def health():
 if __name__ == "__main__":
     # Start the server only when this file is run directly with Python.
     # 0.0.0.0 lets Open WebUI reach it from another machine or container.
+    validate_model_servers()
     app.run(host="0.0.0.0", port=8003)
