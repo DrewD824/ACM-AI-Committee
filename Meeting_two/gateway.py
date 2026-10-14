@@ -103,7 +103,7 @@ def judge_user_message(user_text: str) -> bool:
         return False
 
 
-def format_response(text: str) -> dict:
+def format_response(text: str, finish_reason: str = "stop") -> dict:
     """Put our answer in the JSON format Open WebUI expects."""
     # Both refusals and Qwen answers use this response format.
     return {
@@ -115,10 +115,18 @@ def format_response(text: str) -> dict:
             {
                 "index": 0,
                 "message": {"role": "assistant", "content": text},
-                "finish_reason": "stop",
+                "finish_reason": finish_reason,
             }
         ],
     }
+
+
+def chat_json(payload: dict, status: int = 200):
+    """Return normal JSON and log the exact body sent to the client."""
+    response = jsonify(payload)
+    response.status_code = status
+    print(f"[gateway] Flask JSON: {response.get_data(as_text=True)!r}", flush=True)
+    return response
 
 
 # 3. Chat workflow: this is the endpoint Open WebUI calls.
@@ -136,20 +144,36 @@ def chat_completions():
     )
     if not judge_user_message(user_text):
         print("[gateway] denied", flush=True)
-        return jsonify(format_response(DENIAL_MESSAGE))
+        return chat_json(format_response(DENIAL_MESSAGE))
 
     # Step 3: Safe input goes to Qwen with the original full conversation.
     print("[gateway] forwarding to Qwen", flush=True)
-    reply = general_client.chat.completions.create(
+    # Incoming stream=true still receives one JSON completion, never SSE.
+    qwen_response = general_client.chat.completions.create(
         model=GENERAL_MODEL,
         messages=messages,
         temperature=data.get("temperature", 0.7),
         max_tokens=data.get("max_tokens", 512),
+        stream=False,
         extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
+    print(f"[qwen] full response: {qwen_response.model_dump_json()}", flush=True)
+    choice = qwen_response.choices[0] if qwen_response.choices else None
+    text = choice.message.content if choice else None
+    finish_reason = choice.finish_reason if choice else None
+    print(f"[qwen] message.content: {text!r}", flush=True)
+    print(f"[qwen] finish_reason: {finish_reason!r}", flush=True)
+
+    # HTTP 200 from vLLM does not guarantee an assistant answer was generated.
+    if not isinstance(text, str) or not text.strip():
+        return chat_json({"error": {
+            "message": "Qwen returned no assistant text. Check the gateway's Qwen logs.",
+            "type": "upstream_response_error",
+            "code": "empty_completion",
+        }}, status=502)
+
     # Step 4: Return Qwen's answer in OpenAI-compatible JSON.
-    text = reply.choices[0].message.content or ""
-    return jsonify(format_response(text))
+    return chat_json(format_response(text, finish_reason))
 
 
 # 4. Support routes: model discovery and a basic server check.

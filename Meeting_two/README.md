@@ -70,6 +70,11 @@ Select **filtered-model** in the browser and start chatting. If Open WebUI
 has a streaming option, turn it off for this demo; the gateway returns complete
 answers rather than a stream of tokens.
 
+The gateway always calls Qwen with `stream=False` and returns normal JSON, even
+when the client sends `stream=true`. It logs the full Qwen response, assistant
+content, finish reason, and exact returned JSON. Empty Qwen text returns a 502
+error instead of a successful empty assistant response.
+
 ## Walk through the code together
 
 Start with `chat_completions()` in `gateway.py`. It has four steps:
