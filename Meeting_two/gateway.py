@@ -11,7 +11,7 @@ Students chat in Open WebUI. This script sits between that browser interface
 and the two models. Read chat_completions() first to see the whole workflow.
 
 Run: python gateway.py
-Open WebUI API URL: http://<gateway-host>:8000/v1
+Open WebUI API URL: http://<gateway-host>:8003/v1
 """
 
 import os
@@ -169,4 +169,4 @@ def health():
 if __name__ == "__main__":
     # Start the server only when this file is run directly with Python.
     # 0.0.0.0 lets Open WebUI reach it from another machine or container.
-    app.run(host="0.0.0.0", port=8000)
+    app.run(host="0.0.0.0", port=8003)
