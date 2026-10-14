@@ -13,7 +13,10 @@ def format_data(row):
     
     # Map the integer label to your vLLM script's expected string
     # 1 = Malicious, 0 = Clean
-    label = "MALICIOUS" if row["label"] == 1 else "CLEAN"
+    if row["label"] == 1:
+        label = "MALICIOUS"
+    else:
+        label = "CLEAN"
     
     return {"instruction": prompt_text, "output": label}
 
@@ -26,7 +29,7 @@ print("Shuffling the dataset...")
 clean_ds = clean_ds.shuffle(seed=42)
 
 # 4. Export to JSONL
-output_filename = "committee_filter_dataset.jsonl"
+output_filename = "fine-tune-dataset.jsonl"
 clean_ds.to_json(output_filename)
 
 print(f"Success! Saved {len(clean_ds)} perfectly formatted examples to {output_filename}.")
