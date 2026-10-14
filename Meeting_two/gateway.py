@@ -145,6 +145,7 @@ def chat_completions():
         messages=messages,
         temperature=data.get("temperature", 0.7),
         max_tokens=data.get("max_tokens", 512),
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
     # Step 4: Return Qwen's answer in OpenAI-compatible JSON.
     text = reply.choices[0].message.content or ""
