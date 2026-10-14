@@ -28,14 +28,14 @@ from openai import OpenAI
 # os.environ.get reads an environment variable, or uses the default below.
 # For a local demo, the defaults work without setting environment variables.
 
-FILTER_BASE_URL = os.environ.get("FILTER_BASE_URL", "http://localhost:8001/v1")
+FILTER_BASE_URL = os.environ.get("FILTER_BASE_URL", "http://127.0.0.1:8000/v1")
 FILTER_MODEL = os.environ.get("FILTER_MODEL", "filter-model")
 
-GENERAL_BASE_URL = os.environ.get("GENERAL_BASE_URL", "http://localhost:8002/v1")
+GENERAL_BASE_URL = os.environ.get("GENERAL_BASE_URL", "http://127.0.0.1:8001/v1")
 GENERAL_MODEL = os.environ.get("GENERAL_MODEL", "general-model")
 
 # Students see this single name in Open WebUI, even though we use two models.
-SERVED_MODEL = "committee-model"
+SERVED_MODEL = "filtered-model"
 
 # The filter only judges the prompt. Our code supplies the refusal text.
 denial_messages = [

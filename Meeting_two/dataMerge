@@ -4,7 +4,7 @@ print("Downloading public dataset from Hugging Face...")
 
 # 1. Load the public, un-gated dataset
 # We grab just 20,000 rows to keep the demo fine-tuning fast
-ds = load_dataset("geekyrakshit/prompt-injection-dataset", split="train[:20000]")
+ds = load_dataset("geekyrakshit/prompt-injection-dataset", split="train[:500]")
 
 # 2. Format the data for Unsloth
 def format_data(row):
